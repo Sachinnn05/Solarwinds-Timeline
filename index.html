@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SolarWinds Attack Timeline</title>
+    <style>
+        :root {
+            --bg-color: #000000;
+            --card-bg: rgba(15, 15, 15, 0.85); /* Darker semi-transparent for contrast */
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent: #38bdf8;
+            --danger: #f43f5e;
+            --success: #10b981;
+            --line-color: #334155;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-color);
+            background-image: linear-gradient(rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.98)), url('https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=2034&q=80');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            color: var(--text-main);
+            margin: 0;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            line-height: 1.6;
+        }
+
+        .header {
+            text-align: center;
+            max-width: 800px;
+            margin-bottom: 3rem;
+        }
+
+        .header h1 {
+            color: var(--accent);
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            text-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
+        }
+
+        .header p {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+        }
+
+        .timeline-container {
+            width: 100%;
+            max-width: 800px;
+            position: relative;
+        }
+
+        /* The vertical line */
+        .timeline-container::after {
+            content: '';
+            position: absolute;
+            width: 4px;
+            background-color: var(--line-color);
+            top: 0;
+            bottom: 0;
+            left: 24px;
+            margin-left: -2px;
+            border-radius: 4px;
+            z-index: 1;
+            box-shadow: 0 0 10px rgba(56, 189, 248, 0.2);
+        }
+
+        .event {
+            position: relative;
+            margin-bottom: 2rem;
+            padding-left: 60px;
+            z-index: 2;
+        }
+
+        /* The timeline dot */
+        .event-marker {
+            position: absolute;
+            width: 24px;
+            height: 24px;
+            left: 12px;
+            top: 0;
+            background-color: var(--card-bg);
+            border: 4px solid var(--accent);
+            border-radius: 50%;
+            z-index: 3;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 0 4px var(--bg-color), 0 0 10px var(--accent);
+        }
+
+        .event.active .event-marker {
+            border-color: var(--danger);
+            background-color: var(--danger);
+            box-shadow: 0 0 15px var(--danger);
+        }
+
+        .event-card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            border: 1px solid var(--line-color);
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(5px); /* Add a blur effect for realism */
+        }
+
+        .event-card:hover {
+            border-color: var(--accent);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .event-header {
+            padding: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .event-title-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .date {
+            color: var(--accent);
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 0.25rem;
+        }
+
+        .title {
+            font-size: 1.4rem;
+            font-weight: bold;
+            margin: 0;
+        }
+
+        .expand-icon {
+            color: var(--text-muted);
+            transition: transform 0.3s ease;
+        }
+
+        .event.active .expand-icon {
+            transform: rotate(180deg);
+        }
+
+        /* Expanded Content Details */
+        .event-details {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s cubic-bezier(0, 1, 0, 1);
+            background-color: rgba(0, 0, 0, 0.2);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .event.active .event-details {
+            max-height: 1000px; /* Arbitrary large number to allow expansion */
+            transition: max-height 0.8s ease-in-out;
+        }
+
+        .details-inner {
+            padding: 1.5rem;
+            display: flex;
+            gap: 2rem;
+            border-top: 1px solid var(--line-color);
+        }
+
+        .details-text {
+            flex: 1;
+        }
+
+        .details-text p {
+            margin-top: 0;
+            color: #cbd5e1;
+            font-size: 1.05rem;
+        }
+
+        .details-list {
+            margin-top: 1rem;
+            padding-left: 1.5rem;
+            color: var(--text-muted);
+        }
+
+        .details-list li {
+            margin-bottom: 0.5rem;
+        }
+
+        /* SVG Visual Container */
+        .details-visual {
+            width: 150px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0.9;
+        }
+
+        .details-visual svg {
+            width: 100%;
+            height: auto;
+            stroke: var(--accent);
+            fill: none;
+        }
+
+        .event.active .details-visual svg {
+            stroke: var(--danger);
+            animation: pulse 2s infinite;
+            filter: drop-shadow(0 0 5px var(--danger));
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 0.8; }
+            50% { transform: scale(1.05); opacity: 1; }
+            100% { transform: scale(1); opacity: 0.8; }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 600px) {
+            .details-inner {
+                flex-direction: column;
+            }
+            .details-visual {
+                width: 100px;
+                margin: 0 auto;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>The SolarWinds Cyber Attack</h1>
+        <p>An Interactive Timeline of the 2020 Supply Chain Breach.<br>Click on each phase to explore the attack progression, impact, and recovery.</p>
+    </div>
+
+    <div class="timeline-container" id="timeline">
+        <!-- Events injected via JS -->
+    </div>
+
+    <script>
+        const timelineData = [
+            {
+                date: "Pre-2019",
+                title: "Background & Target Selection",
+                desc: "SolarWinds 'Orion' software is widely used by over 30,000 organizations to monitor their IT networks. State-sponsored hackers (APT29) recognize it as the perfect 'supply chain' target to gain access to multiple high-value government and corporate targets at once.",
+                bullets: [
+                    "Targeted software: SolarWinds Orion.",
+                    "Attacker: Believed to be Russian intelligence (SVR / APT29).",
+                    "Methodology: Supply Chain Attack."
+                ],
+                visual: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line><path d="M12 2v20"></path><path d="M2 12h20"></path><path d="M12 12l3-3"></path><path d="M12 12l-3-3"></path><path d="M12 12l3 3"></path><path d="M12 12l-3 3"></path></svg>`
+            },
+            {
+                date: "Sept - Nov 2019",
+                title: "Initial Access",
+                desc: "Hackers successfully breach the internal networks of SolarWinds. Instead of immediately attacking, they spend months quietly observing the company's software development and build processes without altering any code, learning how to bypass internal security.",
+                bullets: [
+                    "Gained access to internal build servers.",
+                    "Conducted 'dry runs' by injecting harmless code.",
+                    "Remained completely undetected by SolarWinds security."
+                ],
+                visual: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11h18v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-9z"></path><path d="M7 11V7a5 5 0 0 1 10 0v4"></path><circle cx="12" cy="16" r="1"></circle><path d="M12 2a4 4 0 0 1 4 4v2"></path><path d="M8 8V6a4 4 0 0 1 4-4"></path></svg>`
+            },
+            {
+                date: "Feb - June 2020",
+                title: "Attack Progression: SUNBURST Deployment",
+                desc: "The attackers inject a malicious backdoor, nicknamed 'SUNBURST', into legitimate Orion software updates. SolarWinds unknowingly signs the infected update with their official digital certificate and distributes it to their customers.",
+                bullets: [
+                    "Infected file: SolarWinds.Orion.Core.BusinessLayer.dll",
+                    "Approx 18,000 customers downloaded the malware.",
+                    "The malware waited 12-14 days before activating to evade detection."
+                ],
+                visual: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 2h14"></path><path d="M5 22h14"></path><path d="M2 8h20"></path><path d="M2 16h20"></path><path d="M4 2v20"></path><path d="M20 2v20"></path><path d="M8 5a3 3 0 0 1 3-3 3 3 0 0 1 3 3"></path><path d="M11 8l-3 3"></path><path d="M16 8l-3 3"></path><path d="M12 5v3"></path><path d="M8 19a3 3 0 0 0 3 3 3 3 0 0 0 3-3"></path><path d="M11 16l-3-3"></path><path d="M16 16l-3-3"></path><path d="M12 19v-3"></path></svg>`
+            },
+            {
+                date: "Mid 2020",
+                title: "Attack Progression: Lateral Movement",
+                desc: "Once inside victim networks, SUNBURST connects to external Command and Control (C2) servers. Hackers use techniques like 'Golden SAML' to forge authentication tokens, allowing them to bypass Multi-Factor Authentication (MFA) and steal sensitive emails and documents.",
+                bullets: [
+                    "Hackers elevated privileges to Administrator.",
+                    "Forged identity tokens to move laterally across networks.",
+                    "Extracted data while mimicking normal network traffic."
+                ],
+                visual: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line><path d="M12 12h.01"></path><path d="M15 10v4"></path><path d="M11 14v-4"></path><path d="M7 12h2"></path><path d="M18 16v-2"></path><path d="M18 8v2"></path><path d="M21 12h-2"></path><path d="M4 12H2"></path></svg>`
+            },
+            {
+                date: "Dec 8, 2020",
+                title: "Discovery & Impact",
+                desc: "Cybersecurity firm FireEye detects unusual activity on their own network. They discover their proprietary 'Red Team' hacking tools were stolen. Investigation reveals the source of the breach was the trusted SolarWinds update. FireEye alerts the public.",
+                bullets: [
+                    "Impact: US Treasury, Homeland Security, Pentagon breached.",
+                    "Impact: Tech giants like Microsoft and Intel compromised.",
+                    "Massive financial and reputational damage worldwide."
+                ],
+                visual: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><path d="M8 11h6"></path><path d="M11 8v6"></path><path d="M12 11l-3-3"></path><path d="M12 11l3 3"></path><path d="M12 11l-3 3"></path><path d="M12 11l3-3"></path></svg>`
+            },
+            {
+                date: "2021",
+                title: "Recovery",
+                desc: "Victim organizations scramble to contain the breach. The US government issues emergency directives to disconnect affected Orion products immediately. Networks have to be meticulously scoured for backdoors, and in many cases, entirely rebuilt.",
+                bullets: [
+                    "Immediate mass-uninstallation of Orion software.",
+                    "Forced password resets and revocation of all security tokens.",
+                    "Long-term forensic investigations launched by CISA and the FBI."
+                ],
+                visual: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line><path d="M3 15h18"></path><path d="M3 11l9-9 9 9"></path></svg>`
+            },
+            {
+                date: "Present",
+                title: "Lessons Learned",
+                desc: "The SolarWinds attack forced a massive shift in global cybersecurity strategy. It proved that perimeter defense is not enough if a trusted internal tool is compromised, leading to the rapid adoption of Zero Trust architecture.",
+                bullets: [
+                    "Implementation of 'Zero Trust' (Assume Breach mentality).",
+                    "Requirement of Software Bill of Materials (SBOM) for transparency.",
+                    "Stricter auditing of third-party vendors and supply chains."
+                ],
+                visual: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><path d="M9 12l2 2 4-4"></path><rect x="8" y="8" width="8" height="8" rx="1" ry="1"></rect><path d="M12 14v2"></path><path d="M10 10h4"></path></svg>`
+            }
+        ];
+
+        const timelineContainer = document.getElementById('timeline');
+
+        // Render Timeline
+        timelineData.forEach((event, index) => {
+            const eventDiv = document.createElement('div');
+            eventDiv.className = 'event';
+
+            // Generate bullets HTML
+            const bulletsHtml = event.bullets.map(bullet => `<li>${bullet}</li>`).join('');
+
+            eventDiv.innerHTML = `
+                <div class="event-marker"></div>
+                <div class="event-card">
+                    <div class="event-header">
+                        <div class="event-title-group">
+                            <span class="date">${event.date}</span>
+                            <h3 class="title">${event.title}</h3>
+                        </div>
+                        <div class="expand-icon">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        </div>
+                    </div>
+                    <div class="event-details">
+                        <div class="details-inner">
+                            <div class="details-text">
+                                <p>${event.desc}</p>
+                                <strong>Key Details:</strong>
+                                <ul class="details-list">
+                                    ${bulletsHtml}
+                                </ul>
+                            </div>
+                            <div class="details-visual">
+                                ${event.visual}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Click interaction for Accordion
+            eventDiv.querySelector('.event-card').addEventListener('click', () => {
+                // Close others
+                document.querySelectorAll('.event').forEach(e => {
+                    if (e !== eventDiv) e.classList.remove('active');
+                });
+                // Toggle current
+                eventDiv.classList.toggle('active');
+            });
+
+            // Open the first one by default
+            if(index === 0) {
+                eventDiv.classList.add('active');
+            }
+
+            timelineContainer.appendChild(eventDiv);
+        });
+    </script>
+</body>
+</html>
